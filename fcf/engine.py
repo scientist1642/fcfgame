@@ -28,6 +28,18 @@ class Engine:
     def _check_for_uuid(self, uuid):
         if uuid not in self.players:
             raise Exception('Unknown uuid')
+    
+    def _check_for_move(self, player, move):
+        # move has to be l1, r2, d1 .. and so on
+        if not len(move) == 2 or not (move[0] 
+                in 'ldru' and move[1] in '12'):
+            raise Exception('Unknown move type')
+
+        if not player.playable:
+            raise Exception('Player cannot make move')
+
+        if int(move[1]) > player.max_step_size:
+            raise Exception('Character not able to move that long')
   
 
     def join_game(self, uuid, character_type):
@@ -40,7 +52,7 @@ class Engine:
 
         if character_type == 'fr':  
             player = Frog.from_player(spectator)
-        elif self.playersa == 'fl':
+        elif character_type == 'fl':
             player = Fly.from_player(spectator)
         else:
             raise Exception('Character type not recogniszed')
@@ -56,24 +68,22 @@ class Engine:
         self.players[player.uuid] = player
 
     def set_next_move(self, uuid, move):
-        # set move u, d, l or r for player
+        # set move u1, d2, l1 and so on for player
         self._check_for_uuid(uuid) 
         player = self.players[uuid]
-        if move == 'u':
+        self._check_for_move(player, move)
+        d = move[0] # direction
+        c = int(move[1]) # step
+
+        if d == 'u':
             mv = Move.up
-        elif move =='d':
+        elif d =='d':
             mv = Move.down
-        elif move == 'l':
+        elif d == 'l':
             mv = Move.left
-        elif move == 'r':
+        elif d == 'r':
             mv = Move.right
         else:
             raise Exception('unrecognized move')
-
-        player.next_move = mv
-            
-
-
-
-
-
+         
+        player.next_move = (mv[0] * c, mv[1] * c)

@@ -10,13 +10,15 @@ class Move:
     up = (-1, 0)
     down = (1, 0)
     left = (0, -1)
-    right = (1, 0)
+    right = (0, 1)
 
 
 class Player(object):
     character = CharType.general
-    
+    playable = False 
+    max_step_size = 0
     last_used_uuid = 0
+
     def __init__(self, name):
         self.uuid = Player.gen_uuid_debug()
         self.name = name
@@ -47,12 +49,18 @@ class Player(object):
 
 class Frog(Player):
     character = CharType.frog
+    playable = True
+    max_step_size = 1
+
     def __init__(self, name):
         super(Frog, self).__init__(name)
 
 
 class Fly(Player):
     character = CharType.fly
+    playable = True
+    max_step_size = 2
+
     def __init__(self, name):
         super(Fly, self).__init__(name)
     pass

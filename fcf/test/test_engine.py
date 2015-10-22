@@ -24,6 +24,12 @@ class Test(unittest.TestCase):
         uuid = self.engine.add_player(name)
         self.engine.join_game(uuid, 'fr') 
         return uuid
+
+    def join_cartman_as_fly(self):
+        name = 'cartman'
+        uuid = self.engine.add_player(name)
+        self.engine.join_game(uuid, 'fl') 
+        return uuid
     
     def test_join_game_success(self):
         name = 'kenny'
@@ -35,13 +41,14 @@ class Test(unittest.TestCase):
 
     def test_move_success(self):
         uuid = self.join_kenny_as_frog()
-        self.engine.set_next_move(uuid, 'u')
+        self.engine.set_next_move(uuid, 'u1')
         kenny = self.engine.players[uuid]
-        self.assertEquals(kenny.next_move, Move.up)
+        self.assertEquals(kenny.next_move, (-1, 0))
 
-
-
-        
-        
+    def test_fly_move_success(self):
+        uuid = self.join_cartman_as_fly()
+        self.engine.set_next_move(uuid, 'l2')
+        cartman = self.engine.players[uuid]
+        self.assertEquals(cartman.next_move, (0, -2))
 
 
