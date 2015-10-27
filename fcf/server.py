@@ -18,6 +18,7 @@ class Command:
     chooseplayer = 2
     move = 3
 
+
 class Response:
     data = 1
     shutdown = 2
@@ -67,6 +68,7 @@ class Server:
                     uuid = self.game_engine.add_player(name)
                     logging.debug('player %d was connected' % (name))
                     self.clients_socks[uuid] = cl_sock
+                    cl_sock.send("%d %d" % (self.m, self.n))
                     self._send_cl_data(cl_sock)
 
             if (com == Command.chooseplayer):

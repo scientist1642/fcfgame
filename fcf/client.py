@@ -61,6 +61,8 @@ class Client:
                 self.serv_sock = socket.create_connection((self.server_addr, SERVER_PORT))
                 self.serv_sock.send(Command.newplayer)
                 self.serv_sock.send(self.name)
+                boar_size = self.serv_sock.recv(10).split()
+                self.board = (int(boar_size[0].strip()), int(boar_size[1].strip()))
         except:
             #handle error
             pass
