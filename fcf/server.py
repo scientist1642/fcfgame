@@ -109,16 +109,3 @@ class Server:
         self.socket.close()
         del self.threads
         self.clients_socks.clear()
-
-
-
-
-
-
-
-
-
-
-
-
-
