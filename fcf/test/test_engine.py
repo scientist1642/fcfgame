@@ -4,7 +4,7 @@ from fcf.engine import *
 class Test(unittest.TestCase):
     
     def setUp(self):
-        self.engine = Engine(4, 4)
+        self.engine = Engine(4, 4, 0.5)
 
     def test_add_player(self):
         name = 'kenny'

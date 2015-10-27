@@ -1,20 +1,28 @@
 import time
 import random
+import threading
+from functools import wraps
 from fcf.players import *
 
 
+def synchronized(func):
+    @wraps(func)
+    def with_lock(self, *args, **kwargs):
+        with self.lock:
+            return func(self, *args, **kwargs)
+    return with_lock
+
+
 class Engine:
-    def __init__(self, n, m):
+    def __init__(self, n, m, fr=0.5):
         # store players in dict using uuid
         self.players = {}
         self.board = [[None for _ in range(m)] for _ in range(n)]
         self.n = n
         self.m = m
+        self.frame_rate = fr
+        self.lock = threading.Lock()
     
-    def add_player(self, name):
-        spect = Spectator(name) # new player is a spectator
-        self.players[spect.uuid] = spect
-        return spect.uuid
 
     def _free_cells(self):
         """ return list of free cells of board """
@@ -37,11 +45,19 @@ class Engine:
 
         if not player.playable:
             raise Exception('Player cannot make move')
-
+        
         if int(move[1]) > player.max_step_size:
             raise Exception('Character not able to move that long')
-  
 
+    
+    @synchronized 
+    def add_player(self, name):
+        spect = Spectator(name) # new player is a spectator
+        self.players[spect.uuid] = spect
+        return spect.uuid
+    
+    
+    @synchronized
     def join_game(self, uuid, character_type):
         """ uuid and char_type - 'fr' for frog and 'fl' for fly """
         
@@ -66,7 +82,8 @@ class Engine:
         pos = random.choice(cells)
         self.board[pos[0]][pos[1]] = player.uuid
         self.players[player.uuid] = player
-
+    
+    @synchronized
     def set_next_move(self, uuid, move):
         # set move u1, d2, l1 and so on for player
         self._check_for_uuid(uuid) 
