@@ -111,3 +111,8 @@ class Server:
         self.socket.close()
         del self.threads
         self.clients_socks.clear()
+
+if __name__ == '__main__':
+    server = Server(10, 10)
+    server.run()
+
