@@ -33,11 +33,14 @@ class Player(object):
     
     def increase_score(self):
         self.score += 1
-        self.last_score_time = time()
+        self.last_score_time = time.time()
 
     def die(self):
         self.score = 0
         self.__class__ = Spectator
+    
+    def check_timeout(self):
+        pass
 
 
     @classmethod
@@ -69,9 +72,10 @@ class Frog(Player):
     def __init__(self, name):
         super(Frog, self).__init__(name)
 
-    def handle_score_timout():
+    def check_timeout(self):
         # for frog if it doesn't eat anything for 2 minutes it will die
-        if self.last_score_time - time() > self.timeout:
+        if (self.last_score_time is not None and 
+                time.time() - self.last_score_time > Frog.timeout):
             self.die()
 
 
@@ -80,14 +84,16 @@ class Fly(Player):
     char = Character.fly
     playable = True
     max_step_size = 2
+    timeout = 2 * 60 * 60 * 1000 # 2 min
 
     def __init__(self, name):
         super(Fly, self).__init__(name)
     pass
     
-    def handle_score_timout():
+    def check_timeout(self):
         # for frog if it doesn't eat anything for 2 minutes it will die
-        if self.last_score_time - time() > self.timeout:
+        if (self.last_score_time is not None and 
+                time.time() - self.last_score_time > Fly.timeout):
             self.increase_score()
 
 

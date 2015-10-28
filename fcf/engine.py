@@ -1,8 +1,23 @@
+import sys
 import time
 import random
 import threading
 from functools import wraps
-from fcf.players import *
+from players import *
+import logging
+
+
+logging.basicConfig(level=logging.DEBUG, stream=sys.stdout,
+                    format='[%(levelname)s] (%(threadName)-10s) %(message)s',
+                    )
+
+# symbols used to decode/encode board 
+class Symbol(object):
+    dark = '0' # can't see the board
+    me = '1'
+    empty = '2'
+    frog = '3'
+    fly = '4'
 
 
 def synchronized(func):
@@ -18,7 +33,7 @@ def psum(a, b):
 
 
 class Engine:
-    def __init__(self, n, m, fr=0.5):
+    def __init__(self, n, m, fr=0.2):
         # store players in dict using uuid
         self.players = {}
         self.board = [[None for _ in range(m)] for _ in range(n)]
@@ -26,6 +41,7 @@ class Engine:
         self.m = m
         self.frame_rate = fr
         self.lock = threading.Lock()
+        self.loop_thread = threading.Thread(target=self._game_loop)
     
 
     def _free_cells(self):
@@ -39,7 +55,7 @@ class Engine:
 
     def _check_for_uuid(self, uuid):
         if uuid not in self.players:
-            raise Exception('Unknown uuid')
+            raise Exception('Unknown uuid:' + uuid)
     
     def _check_for_move(self, player, move):
         # move has to be l1, r2, d1 .. and so on
@@ -54,7 +70,7 @@ class Engine:
             raise Exception('char not able to move that long')
     
     def _inside(self, x, y):
-        if x >= 0 and y >=0 and x < n and y < m:
+        if x >= 0 and y >=0 and x < self.n and y < self.m:
             return True
         return False
 
@@ -73,7 +89,7 @@ class Engine:
         # same board we give the priority who's timestamp is earlies same for
         # frogs
 
-        candidates = [[(0,0) for _ in range(self.m)] for _ in range(self.n)]
+        candidates = [[[None,None] for _ in range(self.m)] for _ in range(self.n)]
         for x in xrange(self.n):
             for y in xrange(self.m):
                 uuid = self.board[x][y]
@@ -89,19 +105,20 @@ class Engine:
                     pos = 1
                 # nove we want to update number of chars on the cell,
                 # this player is trying to move
-                xto, yto = psum(player.next_move, (x, y))
+                xto, yto = psum(player.next_move, [x, y])
                 
                 inside = self._inside(xto, yto)
                 holder = self.board[xto][yto] if inside else None
-                compet = candidates[xto][yto][pos] # competitior with cell
-                if (inside and holder is None or 
+                compet = candidates[xto][yto][pos] if inside else None # competitior with cell
+                if (inside and (holder is None or 
                         (not self.players[holder].char == player.char and
-                        player.move_tstamp > self.players[compet].move_tstamp)):
+                        (compet is None or 
+                        player.move_tstamp > self.players[compet].move_tstamp)))):
                     candidates[xto][yto][pos] = player.uuid
                 else:
                     # player stays in the same cell
                     candidates[x][y][pos] = player.uuid
-        
+      
         # now waste flies update scores
         for x in xrange(self.n):
             for y in xrange(self.m):
@@ -110,59 +127,64 @@ class Engine:
                     fl = self.players[flid] 
                     fr = self.players[frid]
                     fl.die()
-                    fr.increase_point()
+                    fr.increase_score()
                     self.board[x][y] = frid
                 elif not (flid or frid):
                     self.board[x][y] = None
                 else: # we have only frog or fly
+                    #if len(self.players) > 0 and self.players[1].char != Character.spectator:
+                    #    import pdb; pdb.set_trace()
                     uid = frid if flid is None else flid
                     self.board[x][y] = uid
-                    self.players[uid].check_timeout()
 
-        # make last move stay
+        # make last move stay, and check for timeouts
         for player in self.players.values():
+            player.check_timeout()
             player.next_move = Move.stay
 
 
     def _game_loop(self):
-        self._update_state()
-        time.sleep
+        while True:
+            self._update_state()
+            time.sleep(self.frame_rate)
     
     def get_score(self, uuid):
         return self.players[uuid].score
-     
+
+    def _encode_board_for(self, player):
+        spect = (player.char == Character.spectator)
+        if not spect:   # position of current player
+            px, py = self._get_pos(player.uuid)
+        ret = ''
+        for x in xrange(self.n):
+            for y in xrange(self.m):
+                if not spect and max(abs(x - px), abs(y - py)) > player.max_step_size:
+                    ret += Symbol.dark
+                elif not spect and (x, y) == (px, py):
+                    ret += Symbol.me
+                elif self.board[x][y] is None:
+                    ret += Symbol.empty
+                elif self.players[self.board[x][y]].char == Character.frog:
+                    ret += Symbol.frog
+                else:
+                    ret += Symbol.fly
+        return ret
+
     def vis_area(self, uuid):
         """ return whole board concatenated into chars"""
-        # 0 - area hidden
-        # 1 - players location
-        # 2 - frog
-        # 3 - fly
-        # 4 - area visible, cell empty
         
         #TODO bit more  hardcoding, to refactore later
         self._check_for_uuid(uuid)
         player = self.players[uuid]
-        (px, py) = self._get_pos(uuid)
-        ret = ''
-        for x in xrange(self.n):
-            for y in xrange(self.m):
-                if max(abs(x - px), abs(y - py)) > player.max_step_size:
-                    ret += '0'
-                elif (x, y) == (px, py):
-                    ret += '1'
-                elif self.board[x][y] is None:
-                    ret += '4'
-                elif self.players[self.board[x][y]].char == Character.frog:
-                    ret += '2'
-                else:
-                    ret += '3'
-        return ret
+        #import pdb; pdb.set_trace()
+        return self._encode_board_for(player)
 
     
     @synchronized 
     def add_player(self, name):
         spect = Spectator(name) # new player is a spectator
         self.players[spect.uuid] = spect
+        logging.debug('added player %s with uuid %s' % (name, spect.uuid))
         return spect.uuid
     
     
@@ -188,6 +210,7 @@ class Engine:
 
         player.joined_time = time.time()
         player.score = 0
+        player.last_score_time = time.time()
         pos = random.choice(cells)
         self.board[pos[0]][pos[1]] = player.uuid
         self.players[player.uuid] = player
@@ -214,4 +237,8 @@ class Engine:
             raise Exception('unrecognized move')
          
         player.next_move = (mv[0] * c, mv[1] * c)
+        #import pdb; pdb.set_trace()
         player.move_tstamp = timestamp
+
+    def run(self):
+        self.loop_thread.start()
