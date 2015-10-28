@@ -136,7 +136,7 @@ class Server:
         self.clients_socks.clear()
 
 if __name__ == '__main__':
-    server = Server(10, 11)
+    server = Server(10, 13)
     try:
         server.run()
     except (KeyboardInterrupt, SystemExit):

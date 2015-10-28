@@ -62,7 +62,7 @@ class Screen(GridLayout):
         self.rows = 2
         self.add_widget(strlayout)
         self.m = 10
-        self.n = 11
+        self.n = 13
         buttonLayout = GridLayout(cols = self.n)
         self.board = [[None for _ in xrange(self.m)] for _ in xrange(self.n)]
         for x in xrange(self.n):
