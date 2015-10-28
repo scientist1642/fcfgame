@@ -66,7 +66,7 @@ class Engine:
         if not player.playable:
             raise Exception('Player cannot make move')
         
-        if int(move[1]) > player.max_step_size:
+        if int(move[1]) > player.max_step:
             raise Exception('char not able to move that long')
     
     def _inside(self, x, y):
@@ -158,7 +158,7 @@ class Engine:
         ret = ''
         for x in xrange(self.n):
             for y in xrange(self.m):
-                if not spect and max(abs(x - px), abs(y - py)) > player.max_step_size:
+                if not spect and max(abs(x - px), abs(y - py)) > player.max_look:
                     ret += Symbol.dark
                 elif not spect and (x, y) == (px, py):
                     ret += Symbol.me

@@ -19,7 +19,8 @@ class Move:
 class Player(object):
     char = Character.general
     playable = False 
-    max_step_size = 0
+    max_step = 0
+    max_look = 0
     last_used_uuid = 0
 
     def __init__(self, name):
@@ -66,7 +67,8 @@ class Player(object):
 class Frog(Player):
     char = Character.frog
     playable = True
-    max_step_size = 1
+    max_step = 2
+    max_look = 1
     timeout = 2 * 60 # 2 min
 
     def __init__(self, name):
@@ -83,7 +85,8 @@ class Frog(Player):
 class Fly(Player):
     char = Character.fly
     playable = True
-    max_step_size = 2
+    max_step = 1
+    max_look = 2
     timeout = 2 * 60 # 2 min
 
     def __init__(self, name):
