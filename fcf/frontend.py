@@ -38,7 +38,7 @@ class Screen(GridLayout):
             pass
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
 
-        strlayout = GridLayout(cols=3, row_force_default=True, row_default_height=40) # string layouts
+        strlayout = GridLayout(cols=3, row_force_default=True, row_default_height=40, size_hint_y=None, height=150) # string layouts
         
         self.username = TextInput(multiline=False, text='kenny')
         self.character = TextInput(multiline=False, text='frog')
@@ -62,7 +62,7 @@ class Screen(GridLayout):
         self.rows = 2
         self.add_widget(strlayout)
         self.m = 10
-        self.n = 10
+        self.n = 11
         buttonLayout = GridLayout(cols = self.n)
         self.board = [[None for _ in xrange(self.m)] for _ in xrange(self.n)]
         for x in xrange(self.n):

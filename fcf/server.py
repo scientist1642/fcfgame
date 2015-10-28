@@ -126,6 +126,7 @@ class Server:
             cl_sock = self.clients_socks[uuid]
             self._send_response(cl_sock, Response.shutdown)
             cl_sock.send("Server need to shutdown")
+            self._send_Msg(cl_sock, Response.data + str(e))
 
         for thread in self.threads:
             thread.join()
@@ -135,7 +136,7 @@ class Server:
         self.clients_socks.clear()
 
 if __name__ == '__main__':
-    server = Server(10, 10)
+    server = Server(10, 11)
     try:
         server.run()
     except (KeyboardInterrupt, SystemExit):
