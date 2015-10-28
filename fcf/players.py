@@ -67,13 +67,14 @@ class Frog(Player):
     char = Character.frog
     playable = True
     max_step_size = 1
-    timeout = 2 * 60 * 60 * 1000 # 2 min
+    timeout = 2 * 60 # 2 min
 
     def __init__(self, name):
         super(Frog, self).__init__(name)
 
     def check_timeout(self):
         # for frog if it doesn't eat anything for 2 minutes it will die
+        import pdb; pdb.set_trace()
         if (self.last_score_time is not None and 
                 time.time() - self.last_score_time > Frog.timeout):
             self.die()
@@ -84,7 +85,7 @@ class Fly(Player):
     char = Character.fly
     playable = True
     max_step_size = 2
-    timeout = 2 * 60 * 60 * 1000 # 2 min
+    timeout = 2 * 60 # 2 min
 
     def __init__(self, name):
         super(Fly, self).__init__(name)
