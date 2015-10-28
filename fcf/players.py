@@ -74,7 +74,6 @@ class Frog(Player):
 
     def check_timeout(self):
         # for frog if it doesn't eat anything for 2 minutes it will die
-        import pdb; pdb.set_trace()
         if (self.last_score_time is not None and 
                 time.time() - self.last_score_time > Frog.timeout):
             self.die()
