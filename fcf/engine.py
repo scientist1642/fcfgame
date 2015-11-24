@@ -4,6 +4,7 @@ import random
 import threading
 from functools import wraps
 from players import *
+from utils import *
 import logging
 
 
@@ -52,11 +53,13 @@ class Engine:
                 if self.board[x][y] is None:
                     ret.append((x, y))
         return ret
-
+    
+    # deprecated
     def _check_for_uuid(self, uuid):
         if uuid not in self.players:
             raise Exception('Unknown uuid:' + uuid)
     
+    # deprecated
     def _check_for_move(self, player, move):
         # move has to be l1, r2, d1 .. and so on
         if not len(move) == 2 or not (move[0] 
@@ -73,12 +76,13 @@ class Engine:
         if x >= 0 and y >=0 and x < self.n and y < self.m:
             return True
         return False
-
-    def _get_pos(self, uuid):
+    
+    # deprecated
+    def _get_pos(self, player):
         # not efficient shouldn't be called inside a loop
         for x in xrange(self.n):
             for y in xrange(self.m):
-                if self.board[x][y] == uuid:
+                if self.board[x][y] == player:
                     return (x, y)
 
     @synchronized 
@@ -92,11 +96,12 @@ class Engine:
         candidates = [[[None,None] for _ in range(self.m)] for _ in range(self.n)]
         for x in xrange(self.n):
             for y in xrange(self.m):
-                uuid = self.board[x][y]
+                """uuid = self.board[x][y]
                 if uuid is None:
                     continue
-                player = self.players[uuid]
-                if not player.playable:
+                player = self.players[uuid]"""
+                player = self.board[x][y]
+                if player is None or not player.playable:
                     continue
                 # position of characters in the tuple
                 if player.char == Character.fly:
@@ -107,6 +112,7 @@ class Engine:
                 # this player is trying to move
                 xto, yto = psum(player.next_move, [x, y])
                 
+                """
                 inside = self._inside(xto, yto)
                 holder = self.board[xto][yto] if inside else None
                 compet = candidates[xto][yto][pos] if inside else None # competitior with cell
@@ -118,7 +124,19 @@ class Engine:
                 else:
                     # player stays in the same cell
                     candidates[x][y][pos] = player.uuid
-      
+                """
+                inside = self._inside(xto, yto)
+                holder = self.board[xto][yto] if inside else None
+                compet = candidates[xto][yto][pos] if inside else None # competitior with cell
+                if (inside and (holder is None or 
+                        (not holder.char == player.char and
+                        (compet is None or 
+                        player.move_tstamp > compet.move_tstamp)))):
+                    candidates[xto][yto][pos] = player
+                else:
+                    # player stays in the same cell
+                    candidates[x][y][pos] = player
+        """ 
         # now waste flies update scores
         for x in xrange(self.n):
             for y in xrange(self.m):
@@ -141,6 +159,25 @@ class Engine:
         for player in self.players.values():
             player.check_timeout()
             player.next_move = Move.stay
+        """
+
+        # now waste flies update scores
+        for x in xrange(self.n):
+            for y in xrange(self.m):
+                fl, fr = candidates[x][y]
+                if fl and fr: # we have fly and frog at the same c
+                    fl.die()
+                    fr.increase_score()
+                    self.board[x][y] = frid
+                elif not (fl or fr):
+                    self.board[x][y] = None
+                else: # we have only frog or fly
+                    self.board[x][y] = fl or fr
+
+        # make last move stay, and check for timeouts
+        for player in self.players.values():
+            player.check_timeout()
+            player.next_move = Move.stay
 
 
     def _game_loop(self):
@@ -148,10 +185,12 @@ class Engine:
             self._update_state()
             time.sleep(self.frame_rate)
     
+    # deprecated
     def get_score(self, uuid):
         return self.players[uuid].score
 
     def _encode_board_for(self, player):
+        """
         spect = (player.char == Character.spectator)
         if not spect:   # position of current player
             px, py = self._get_pos(player.uuid)
@@ -169,6 +208,26 @@ class Engine:
                 else:
                     ret += Symbol.fly
         return ret
+        """
+        spect = (player.char == Character.spectator)
+        if not spect:   # position of current player
+            # TODO just player._get_pos
+            px, py = self._get_pos(player)
+        ret = ''
+        for x in xrange(self.n):
+            for y in xrange(self.m):
+                if not spect and max(abs(x - px), abs(y - py)) > player.max_look:
+                    ret += Symbol.dark
+                elif not spect and (x, y) == (px, py):
+                    ret += Symbol.me
+                elif self.board[x][y] is None:
+                    ret += Symbol.empty
+                elif self.board[x][y].char == Character.frog:
+                    ret += Symbol.frog
+                else:
+                    ret += Symbol.fly
+        return ret
+    
 
     def vis_area(self, uuid):
         """ return whole board concatenated into chars"""
@@ -178,6 +237,10 @@ class Engine:
         player = self.players[uuid]
         #import pdb; pdb.set_trace()
         return self._encode_board_for(player)
+   
+    # TODO remove new
+    def vis_area_new(self, player):
+        return self._encode_board_for(player)
 
     
     @synchronized 
@@ -186,6 +249,10 @@ class Engine:
         self.players[spect.uuid] = spect
         logging.debug('added player %s with uuid %s' % (name, spect.uuid))
         return spect.uuid
+
+    def register(self, name):
+        # TODO we should make a proxy object here
+        pass
     
     
     @synchronized
@@ -212,9 +279,36 @@ class Engine:
         player.score = 0
         player.last_score_time = time.time()
         pos = random.choice(cells)
-        self.board[pos[0]][pos[1]] = player.uuid
+        self.board[pos[0]][pos[1]] = player
         self.players[player.uuid] = player
-    
+
+    def join_game_new(self, player, char_type):
+        """ char_type 'fr' for frog and 'fl' for fly """
+        
+        spectator =  player
+        if not spectator.char == Character.spectator:
+            raise Exception('Player is not a spectator')
+        # TODO implement transform
+        if char_type == 'fr':
+            player.transform_to(Frog)
+        elif char_type == 'fl':
+            player.transform_to(Fly)
+        else:
+            raise Exception('char type not recogniszed')
+
+        cells = self._free_cells()
+        if len(cells) == 0:
+            raise Exception('There is no empty place on a board')
+
+        player.joined_time = time.time()
+        player.score = 0
+        player.last_score_time = time.time()
+        pos = random.choice(cells)
+        self.board[pos[0]][pos[1]] = player
+        self.players[player.uuid] = player
+        
+   
+   # TODO remove later
     @synchronized
     def set_next_move(self, uuid, move, timestamp):
         # set move u1, d2, l1 and so on for player with uuid
