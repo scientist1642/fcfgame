@@ -11,7 +11,8 @@ from kivy.core.window import Window
 from kivy.clock import Clock
 from kivy.uix.image import Image
 
-from client import Client
+from pyro_client import Client
+import Pyro4
 
 from kivy.config import Config
 Config.set('graphics', 'width', '100')
@@ -46,7 +47,7 @@ class Screen(GridLayout):
         strlayout.add_widget(self.username)
         self.score_label = Label(text='0')
         strlayout.add_widget(self.score_label)
-        strlayout.add_widget(Label(text='Ip address'))
+        strlayout.add_widget(Label(text='Pyro address'))
         self.ip = TextInput(multiline=False, text='localhost')
         strlayout.add_widget(self.ip)
         self.connect_button = Button(text='connect')
@@ -82,11 +83,13 @@ class Screen(GridLayout):
             self._pop('Game already started')
             return 
         self.client.set_name(str(self.username.text))
-        self.client.set_server_ip(str(self.ip.text))
+        self.client.set_uri(str(self.ip.text))
         try:
-            self.client.run()
+            self.client.connect()
         except Exception, e:
-            self._pop('not able to connect' + e)
+            self._pop('not able to connect' + str(e))
+            print "".join(Pyro4.util.getPyroTraceback())
+            raise e
         self.game_started = True
     
     def _join_callback(self, r):
@@ -136,6 +139,11 @@ class Screen(GridLayout):
         print('My keyboard have been closed!')
         #self._keyboard.unbind(on_key_down=self._on_keyboard_down)
         #self._keyboard = None
+    
+    def disconnect(self):
+        if self.game_started:
+            self.client.disconnect()
+
 
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         print('The key', keycode, 'have been pressed')
@@ -161,7 +169,11 @@ class Screen(GridLayout):
 
 class MyApp(App):
     def build(self):
-        return Screen()
+        self.scr = Screen()
+        return self.scr
+    def on_stop(self):
+        self.scr.disconnect()
+
 
 if __name__ == '__main__':
     MyApp().run()
