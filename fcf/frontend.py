@@ -13,6 +13,7 @@ from kivy.uix.image import Image
 
 from pyro_client import Client
 import Pyro4
+import select
 
 from kivy.config import Config
 Config.set('graphics', 'width', '100')
@@ -30,6 +31,7 @@ class Screen(GridLayout):
         super(Screen, self).__init__(**kwargs)
         # init keyboard 
         self.poll_interval = 0.2
+        self.pyro_interval = 0.1
 
         self._keyboard = Window.request_keyboard(
             self._keyboard_closed, self, 'text')
@@ -57,6 +59,16 @@ class Screen(GridLayout):
         
         self.join_button = Button(text='join game')
         strlayout.add_widget(self.join_button)
+        
+        # for server button
+        self.server_button = Button(text='new server')
+        self.server_button.bind(on_press=self._server_button)
+        strlayout.add_widget(self.server_button)
+        # pyro needs it's own loop, alternative is here
+        # https://pythonhosted.org/Pyro4/servercode.html#integrating-pyro-in-your-own-event-loop
+
+        Clock.schedule_interval(self.pyro_callback, self.pyro_interval)
+        # end for server button
         self.connect_button.bind(on_press=self._connect_callback)
         self.join_button.bind(on_press=self._join_callback)
 
@@ -77,6 +89,19 @@ class Screen(GridLayout):
         #client part
         self.client = Client()
         Clock.schedule_interval(self._render, self.poll_interval)
+
+    def  _server_button(self, r):
+        self.client.start_updating_servers()
+
+    def pyro_callback(self, dt):
+        return
+        while True:
+            s,_,_ = select.select(daemon.sockets,[],[],0.01)
+            if s:
+                daemon.events(s)
+            else:
+                # no more events, stop the loop, we'll get called again soon anyway
+                break
         
     def _connect_callback(self, r):
         if self.game_started:
@@ -122,6 +147,9 @@ class Screen(GridLayout):
         but.background_color  = col
 
     def _render(self, dt):
+        xs = self.client.get_aval_servers()
+        self.username.text = (' '.join(xs))
+        return
         if not self.game_started:
             return
         s = self.client.get_board()

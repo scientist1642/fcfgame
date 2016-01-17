@@ -1,7 +1,16 @@
+# Client in a sense now means - a client of frontend, this code 
+# is also responsible for starting a server if it needs to.
 import logging
 import sys
 import Pyro4
+import time
+from multiprocessing import Process, Manager
+import socket
+from pyro_server import Server
 
+# port to listen to server updates
+SERVER_UPD_PORT = 7779
+MAX_UPD_INTERVAL = 15
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout,
                     format='[%(levelname)s] (%(threadName)-10s) %(message)s',
@@ -15,6 +24,11 @@ class Client:
         self.score = None
         self.player = None
         self.game = None
+        manager = Manager()
+        self.aval_servers = manager.dict()
+        self.update_proc = None # process to update available servers
+        self.update_sock  = None # socket to listen for broadcast
+        self.server = Server(10, 13)
 
     def connect(self):
         if self.uri is None:
@@ -34,7 +48,9 @@ class Client:
 
     def get_board(self):
         logging.debug('board requested returned:')
-        return self.player.get_vis_area()
+        vis_area = self.player.get_vis_area()
+        print vis_area
+        return  vis_area
 
     def set_uri(self, uri):
         self.uri = uri
@@ -52,6 +68,45 @@ class Client:
         # if a user disconnects we kill a character
         self.player.die()
 
+    def _update_aval_servers(self, aval_servers):
+        self.update_sock = socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.update_sock.bind(('', SERVER_UPD_PORT))
+        while True:
+            server_uri = self.update_sock.recv(1024)
+            #logging.debug('received server %s' % (server_uri,))
+
+            # to check we reveive expected messages
+            if server_uri.startswith('fcfgame|'):
+                _, server_uri = server_uri.split('|', 1)
+                self.aval_servers[server_uri] = time.time()
+            
+            # check for outdated servers
+            to_delete = []
+            for serv, upd_time in self.aval_servers.items():
+                if upd_time - time.time() > MAX_UPD_INTERVAL:
+                    to_delete.append(serv)
+
+            for serv in to_delete:
+                del self.aval_servers[serv]
+
+
     def choose_player(self, char):
         self.player.join_game(char)
 
+    def get_aval_servers(self):
+        return self.aval_servers.keys()
+
+    def start_updating_servers(self):
+        self.update_proc = Process(target=self._update_aval_servers, 
+                args=(self.aval_servers,))
+        self.update_proc.start()
+
+    def stop_updating_servers(self):
+        self.serv_sock.close()
+        self.update_proc.kill()
+
+    def start_server(self):
+        self.server.start_server()
+
+    def stop_server(self):
+        self.server.stop_server()
