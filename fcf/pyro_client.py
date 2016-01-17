@@ -9,7 +9,7 @@ import socket
 from pyro_server import Server
 
 # port to listen to server updates
-SERVER_UPD_PORT = 7779
+SERVER_UPD_PORT = 7780
 MAX_UPD_INTERVAL = 15
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout,
@@ -29,6 +29,7 @@ class Client:
         self.update_proc = None # process to update available servers
         self.update_sock  = None # socket to listen for broadcast
         self.server = Server(10, 13)
+        self.game_started = False
 
     def connect(self):
         if self.uri is None:
@@ -37,19 +38,26 @@ class Client:
             raise Exception('name not set')
 
         try:
+            print('trying to get proxy object')
             self.game = Pyro4.Proxy(self.uri)
+            logging.warn(self.uri)
         except Exception, e:
             logging.error('Couldn"t get a game object')
             raise e
         self.player = self.game.register(self.name)
 
     def get_score(self):
-        self.player.get_score()
+        return self.player.get_score()
 
     def get_board(self):
         logging.debug('board requested returned:')
-        vis_area = self.player.get_vis_area()
-        print vis_area
+        try:
+            vis_area = self.player.get_vis_area()
+        except Pyro4.errors.PyroError as e:
+            vis_area = None
+            logging.error('connection errror occured\n' + str(e))
+            pass
+        #print vis_area
         return  vis_area
 
     def set_uri(self, uri):
@@ -69,7 +77,7 @@ class Client:
         self.player.die()
 
     def _update_aval_servers(self, aval_servers):
-        self.update_sock = socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.update_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.update_sock.bind(('', SERVER_UPD_PORT))
         while True:
             server_uri = self.update_sock.recv(1024)
@@ -109,4 +117,5 @@ class Client:
         self.server.start_server()
 
     def stop_server(self):
+        self.game_started = False
         self.server.stop_server()

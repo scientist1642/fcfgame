@@ -29,9 +29,10 @@ class Symbol(object):
     fly = '4'
 
 class MainScreen(GridLayout, Screen):
-    def __init__(self, scr_manager, **kwargs):
+    def __init__(self, scr_manager, client, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
         self.sm = scr_manager
+        self.client = client
         # init keyboard
         self.poll_interval = 0.2
         self.pyro_interval = 0.1
@@ -48,7 +49,7 @@ class MainScreen(GridLayout, Screen):
 
         strlayout.add_widget(Label(text=''))
         strlayout.add_widget(Label(text=''))
-        self.score_label = Label(text='0')
+        self.score_label = Label(text='12323')
         strlayout.add_widget(self.score_label)
 
         self.username = TextInput(multiline=False, text='kenny')
@@ -85,7 +86,6 @@ class MainScreen(GridLayout, Screen):
         self.game_started = False
 
         #client part
-        self.client = Client()
         Clock.schedule_interval(self._render, self.poll_interval)
 
     """
@@ -105,7 +105,7 @@ class MainScreen(GridLayout, Screen):
     """
 
     def _join_callback(self, r):
-        if not self.game_started:
+        if not self.client.game_started:
             self._pop("should connect first")
             return
         if not (self.character.text == 'fly' or 
@@ -134,10 +134,7 @@ class MainScreen(GridLayout, Screen):
         but.background_color = col
 
     def _render(self, dt):
-        xs = self.client.get_aval_servers()
-        self.username.text = (' '.join(xs))
-        return
-        if not self.game_started:
+        if not self.client.game_started:
             return
         s = self.client.get_board()
         if s is None:
@@ -182,14 +179,22 @@ class MainScreen(GridLayout, Screen):
         return True
 
     def change_to_init_scr(self, r):
+        self.client.stop_server()
         self.sm.current = 'initial'
         self.sm.get_screen("initial").render()
 
 class InitialScreen(Screen):
-    def __init__(self, scr_manager, **kwargs):
+    def __init__(self, scr_manager, client, **kwargs):
         super(InitialScreen, self).__init__(**kwargs)
         self.sm = scr_manager
+        self.client = client
         self.render()
+    
+    def _pop(self, msg):
+        p = Popup(title='warning',
+                content=Label(text=msg),
+                    size_hint=(None, None), size=(400, 400))
+        p.open()
 
     def render(self):
         # create content and add to the popup
@@ -198,6 +203,8 @@ class InitialScreen(Screen):
         check_servers = Button(text='Update servers')
         #button box
         button_box = BoxLayout(orientation='vertical', spacing=10)
+        self.username_text = TextInput(text="username", size_hint=(1, 1))
+        button_box.add_widget(self.username_text)
         button_box.add_widget(connect_but)
         button_box.add_widget(create_but)
         button_box.add_widget(check_servers)
@@ -210,7 +217,8 @@ class InitialScreen(Screen):
                                    padding=(10, 10))
         self.servers_label.bind(size=self.servers_label.setter('text_size'))
         servers_box.add_widget(self.servers_label)
-        servers_box.add_widget(TextInput(text="Type server number", size_hint=(1, .1)))
+        self.server_text = TextInput(text="server number", size_hint=(1, .1))
+        servers_box.add_widget(self.server_text)
         #outer box
         outer_box = BoxLayout()
         outer_box.add_widget(button_box)
@@ -221,12 +229,32 @@ class InitialScreen(Screen):
                            size_hint=(0.7,0.7),
                            )
 
-        connect_but.bind(on_press=self._change_to_main_scr)
-        create_but.bind(on_press=self._change_to_main_scr)
+        connect_but.bind(on_press=self.create_btn_callback)
+        create_but.bind(on_press=self.create_btn_callback)
         check_servers.bind(on_press=self._update_servers)
         self.popup.open()
 
-    def _change_to_main_scr(self, r):
+    def create_btn_callback(self, r):
+        
+        # start the server
+        
+        self.client.start_server()
+
+        # and connect
+
+        self.client.set_name(str(self.username_text.text))
+        self.client.set_uri(str(self.client.server.uri))
+        print self.client.server.uri
+        try:
+            self.client.connect()
+        except Exception, e:
+            self._pop('not able to connect' + str(e))
+            print "".join(Pyro4.util.getPyroTraceback())
+            raise e
+
+        self.client.game_started = True
+
+        ### 
         self.popup.dismiss()
         self.sm.current = 'main'
 
@@ -243,8 +271,9 @@ class MyApp(App):
     def build(self):
         # Create the screen manager
         self.sm = ScreenManager()
-        self.main_scr = MainScreen(self.sm, name='main')
-        self.init_scr = InitialScreen(self.sm, name='initial')
+        self.client = Client() # client for gui
+        self.main_scr = MainScreen(self.sm, self.client, name='main')
+        self.init_scr = InitialScreen(self.sm, self.client, name='initial')
         self.sm.add_widget(self.init_scr)
         self.sm.add_widget(self.main_scr)
         return self.sm
