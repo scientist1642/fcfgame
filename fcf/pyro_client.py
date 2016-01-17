@@ -9,7 +9,7 @@ import socket
 from pyro_server import Server
 
 # port to listen to server updates
-SERVER_UPD_PORT = 7780
+SERVER_UPD_PORT = 7782
 MAX_UPD_INTERVAL = 15
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout,
@@ -76,41 +76,42 @@ class Client:
         # if a user disconnects we kill a character
         self.player.die()
 
-    def _update_aval_servers(self, aval_servers):
-        self.update_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.update_sock.bind(('', SERVER_UPD_PORT))
+    def _update_aval_servers(self, sock, aval_servers):
         while True:
-            server_uri = self.update_sock.recv(1024)
+            server_uri = sock.recv(1024)
             #logging.debug('received server %s' % (server_uri,))
+            print 'received server' + server_uri
 
             # to check we reveive expected messages
             if server_uri.startswith('fcfgame|'):
                 _, server_uri = server_uri.split('|', 1)
-                self.aval_servers[server_uri] = time.time()
+                aval_servers[server_uri] = time.time()
             
-            # check for outdated servers
-            to_delete = []
-            for serv, upd_time in self.aval_servers.items():
-                if upd_time - time.time() > MAX_UPD_INTERVAL:
-                    to_delete.append(serv)
-
-            for serv in to_delete:
-                del self.aval_servers[serv]
 
 
     def choose_player(self, char):
         self.player.join_game(char)
 
     def get_aval_servers(self):
+        # check for outdated servers
+        to_delete = []
+        for serv, upd_time in self. aval_servers.items():
+            if time.time() - upd_time > MAX_UPD_INTERVAL:
+                to_delete.append(serv)
+
+        for serv in to_delete:
+            del self.aval_servers[serv]
         return self.aval_servers.keys()
 
     def start_updating_servers(self):
+        self.update_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.update_sock.bind(('', SERVER_UPD_PORT))
         self.update_proc = Process(target=self._update_aval_servers, 
-                args=(self.aval_servers,))
+                args=(self.update_sock, self.aval_servers))
         self.update_proc.start()
 
     def stop_updating_servers(self):
-        self.serv_sock.close()
+        self.update_sock.close()
         self.update_proc.terminate()
 
     def start_server(self):

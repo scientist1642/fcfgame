@@ -4,7 +4,7 @@ import logging
 import signal
 import sys
 from multiprocessing import Process, Queue, Value, Manager
-from threading import Thread
+from threading import Thread, Event
 import socket
 import ctypes
 
@@ -39,13 +39,13 @@ class Server():
                 ns = False)
         """
 
-    def _broadcast_loop(self, sock, uri):     
+    def _broadcast_loop(self, sock, uri, stop_event):     
         print "starting broadcast loop"
-        while True:
+        while not stop_event.is_set():
             payload = 'fcfgame|' + uri
             print 'Broadcasting... ' + payload
             sock.sendto(payload, ('255.255.255.255', SERVER_UPD_PORT))
-            time.sleep(BROADCAST_INTERVAL)
+            stop_event.wait(BROADCAST_INTERVAL)
 
     def start_server(self):
         """create game """
@@ -72,15 +72,16 @@ class Server():
         self.broadcast_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.broadcast_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.broadcast_sock.bind(('', SERVER_UPD_PORT))
-
+        self._broadcast_event =  Event()
         self.broadcast_proc = Thread(target = self._broadcast_loop, 
-                args=(self.broadcast_sock, self.uri))
+                args=(self.broadcast_sock, self.uri, self._broadcast_event))
+        self._broadcast_event.clear()
         self.broadcast_proc.start()
 
     def stop_server(self):
         #try:
         self.broadcast_sock.close()
-        self.broadcast_proc.terminate()
+        self._broadcast_event.set()
         self.pyro_proc.terminate()
         #except Pyro4.error.CommunicationErrorr as e:
         #    print 'connection error occured'

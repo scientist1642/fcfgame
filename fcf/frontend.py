@@ -240,11 +240,14 @@ class InitialScreen(Screen):
     def _upd_servers(self, dt):
         av_servers = self.client.get_aval_servers()
         self.servers_label.text = '\n'.join(av_servers)
+        serv_with_nums = map(lambda (x, y): str(x) + ') ' + y, enumerate(av_servers))
+        self.servers_label.text = '\n'.join(serv_with_nums)
 
     def create_btn_callback(self, r):
         
         # start the server
         
+        self.client.stop_updating_servers()
         self.client.start_server()
 
         # and connect
