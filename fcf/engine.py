@@ -4,7 +4,6 @@ import random
 import threading
 from functools import wraps
 from players import *
-from utils import *
 import logging
 
 
