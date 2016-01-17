@@ -218,8 +218,8 @@ class InitialScreen(Screen):
         self.popup = Popup(title='Initial screen',
                            content=outer_box,
                            auto_dismiss=False,
-                           size_hint=(None, None),
-                           size=(400, 400))
+                           size_hint=(0.7,0.7),
+                           )
 
         connect_but.bind(on_press=self._change_to_main_scr)
         create_but.bind(on_press=self._change_to_main_scr)
