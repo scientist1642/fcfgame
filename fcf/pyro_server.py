@@ -3,13 +3,10 @@ from engine import *
 import logging
 import sys
 from multiprocessing import Process, Queue
-from pyro_client import SERVER_UPD_PORT
 import socket
 
 # Board Size
-N = 10
-M = 13 
-
+SERVER_UPD_PORT = 7779
 BROADCAST_INTERVAL = 5
 
 
