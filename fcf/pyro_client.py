@@ -5,6 +5,7 @@ import sys
 import Pyro4
 import time
 from multiprocessing import Process, Manager
+from threading import Thread, Event
 import socket
 from pyro_server import Server
 
@@ -30,6 +31,7 @@ class Client:
         self.update_sock  = None # socket to listen for broadcast
         self.server = Server(10, 13)
         self.game_started = False
+        self.stop_upd_event = Event()
 
     def connect(self):
         if self.uri is None:
@@ -76,9 +78,15 @@ class Client:
         # if a user disconnects we kill a character
         self.player.die()
 
-    def _update_aval_servers(self, sock, aval_servers):
+    def _update_aval_servers(self, sock, aval_servers, stop_event):
         while True:
-            server_uri = sock.recv(1024)
+            try:
+                server_uri = sock.recv(1024)
+            except socket.timeout, e:    
+                if not stop_event.is_set():
+                    continue
+                else:
+                    return
             #logging.debug('received server %s' % (server_uri,))
             print 'received server' + server_uri
 
@@ -105,14 +113,18 @@ class Client:
 
     def start_updating_servers(self):
         self.update_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.update_sock.bind(('', SERVER_UPD_PORT))
-        self.update_proc = Process(target=self._update_aval_servers, 
-                args=(self.update_sock, self.aval_servers))
+        self.update_sock.bind(('', 7774))
+        self.update_sock.settimeout(2)
+        self.update_proc = Thread(target=self._update_aval_servers, 
+                args=(self.update_sock, self.aval_servers, self.stop_upd_event))
+        self.stop_upd_event.clear()
         self.update_proc.start()
 
     def stop_updating_servers(self):
+        print "stopping updating servers"
+        self.stop_upd_event.set()
         self.update_sock.close()
-        self.update_proc.terminate()
+        #self.update_proc_event.set()
 
     def start_server(self):
         self.server.start_server()
