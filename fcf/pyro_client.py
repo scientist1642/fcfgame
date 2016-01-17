@@ -111,7 +111,7 @@ class Client:
 
     def stop_updating_servers(self):
         self.serv_sock.close()
-        self.update_proc.kill()
+        self.update_proc.terminate()
 
     def start_server(self):
         self.server.start_server()

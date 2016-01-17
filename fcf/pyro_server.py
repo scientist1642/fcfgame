@@ -4,6 +4,7 @@ import logging
 import signal
 import sys
 from multiprocessing import Process, Queue, Value, Manager
+from threading import Thread
 import socket
 import ctypes
 
@@ -72,7 +73,7 @@ class Server():
         self.broadcast_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.broadcast_sock.bind(('', SERVER_UPD_PORT))
 
-        self.broadcast_proc = Process(target = self._broadcast_loop, 
+        self.broadcast_proc = Thread(target = self._broadcast_loop, 
                 args=(self.broadcast_sock, self.uri))
         self.broadcast_proc.start()
 

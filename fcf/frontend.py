@@ -84,6 +84,7 @@ class MainScreen(GridLayout, Screen):
         self.add_widget(buttonLayout)
         
         self.game_started = False
+        self.client.start_updating_servers()
 
         #client part
         Clock.schedule_interval(self._render, self.poll_interval)
@@ -233,6 +234,12 @@ class InitialScreen(Screen):
         create_but.bind(on_press=self.create_btn_callback)
         check_servers.bind(on_press=self._update_servers)
         self.popup.open()
+        self.servupd_interval = 2 
+        Clock.schedule_interval(self._upd_servers, self.servupd_interval)
+
+    def _upd_servers(self, dt):
+        av_servers = self.client.get_aval_servers()
+        self.servers_label.text = '\n'.join(av_servers)
 
     def create_btn_callback(self, r):
         
