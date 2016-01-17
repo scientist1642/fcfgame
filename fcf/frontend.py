@@ -7,6 +7,8 @@ from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.textinput import TextInput
 from kivy.uix.popup import Popup
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.boxlayout import BoxLayout
 from kivy.core.window import Window
 from kivy.clock import Clock
 from kivy.uix.image import Image
@@ -26,10 +28,11 @@ class Symbol(object):
     frog = '3'
     fly = '4'
 
-class Screen(GridLayout):
-    def __init__(self, **kwargs):
-        super(Screen, self).__init__(**kwargs)
-        # init keyboard 
+class MainScreen(GridLayout, Screen):
+    def __init__(self, scr_manager, **kwargs):
+        super(MainScreen, self).__init__(**kwargs)
+        self.sm = scr_manager
+        # init keyboard
         self.poll_interval = 0.2
         self.pyro_interval = 0.1
 
@@ -42,35 +45,30 @@ class Screen(GridLayout):
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
 
         strlayout = GridLayout(cols=3, row_force_default=True, row_default_height=40, size_hint_y=None, height=150) # string layouts
-        
+
+        strlayout.add_widget(Label(text=''))
+        strlayout.add_widget(Label(text=''))
+        self.score_label = Label(text='0')
+        strlayout.add_widget(self.score_label)
+
         self.username = TextInput(multiline=False, text='kenny')
         self.character = TextInput(multiline=False, text='frog')
         strlayout.add_widget(Label(text='username', size_hint_y=None,height=10))
         strlayout.add_widget(self.username)
-        self.score_label = Label(text='0')
-        strlayout.add_widget(self.score_label)
-        strlayout.add_widget(Label(text='Pyro address'))
-        self.ip = TextInput(multiline=False, text='localhost')
-        strlayout.add_widget(self.ip)
-        self.connect_button = Button(text='connect')
-        strlayout.add_widget(self.connect_button)
-        strlayout.add_widget(Label(text='Character - frorg or fly',size_hint_y=None, height=10))
-        strlayout.add_widget(self.character)
-        
         self.join_button = Button(text='join game')
         strlayout.add_widget(self.join_button)
-        
-        # for server button
-        self.server_button = Button(text='new server')
-        self.server_button.bind(on_press=self._server_button)
-        strlayout.add_widget(self.server_button)
-        # pyro needs it's own loop, alternative is here
-        # https://pythonhosted.org/Pyro4/servercode.html#integrating-pyro-in-your-own-event-loop
-
-        Clock.schedule_interval(self.pyro_callback, self.pyro_interval)
-        # end for server button
-        self.connect_button.bind(on_press=self._connect_callback)
         self.join_button.bind(on_press=self._join_callback)
+
+        #self.connect_button.bind(on_press=self._connect_callback)
+        #strlayout.add_widget(Label(text='Pyro address'))
+        #self.ip = TextInput(multiline=False, text='localhost')
+        #strlayout.add_widget(self.ip)
+        #self.connect_button = Button(text='connect')
+        #strlayout.add_widget(self.connect_button)
+
+        strlayout.add_widget(Label(text='Character - frorg or fly',size_hint_y=None, height=10))
+        strlayout.add_widget(self.character)
+        strlayout.add_widget(Button(text='Exit', on_press=self.change_to_init_scr))
 
         self.rows = 2
         self.add_widget(strlayout)
@@ -90,19 +88,7 @@ class Screen(GridLayout):
         self.client = Client()
         Clock.schedule_interval(self._render, self.poll_interval)
 
-    def  _server_button(self, r):
-        self.client.start_updating_servers()
-
-    def pyro_callback(self, dt):
-        return
-        while True:
-            s,_,_ = select.select(daemon.sockets,[],[],0.01)
-            if s:
-                daemon.events(s)
-            else:
-                # no more events, stop the loop, we'll get called again soon anyway
-                break
-        
+    """
     def _connect_callback(self, r):
         if self.game_started:
             self._pop('Game already started')
@@ -116,7 +102,8 @@ class Screen(GridLayout):
             print "".join(Pyro4.util.getPyroTraceback())
             raise e
         self.game_started = True
-    
+    """
+
     def _join_callback(self, r):
         if not self.game_started:
             self._pop("should connect first")
@@ -144,7 +131,7 @@ class Screen(GridLayout):
             col = ( 1, 0.0784314, 0.576471,1)
         elif symb == Symbol.me:
             col =  (0.117647, 0.564706, 1,1)
-        but.background_color  = col
+        but.background_color = col
 
     def _render(self, dt):
         xs = self.client.get_aval_servers()
@@ -172,7 +159,6 @@ class Screen(GridLayout):
         if self.game_started:
             self.client.disconnect()
 
-
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         print('The key', keycode, 'have been pressed')
         print(' - text is %r' % text)
@@ -195,13 +181,76 @@ class Screen(GridLayout):
         self.client.set_move(d)
         return True
 
+    def change_to_init_scr(self, r):
+        self.sm.current = 'initial'
+        self.sm.get_screen("initial").render()
+
+class InitialScreen(Screen):
+    def __init__(self, scr_manager, **kwargs):
+        super(InitialScreen, self).__init__(**kwargs)
+        self.sm = scr_manager
+        self.render()
+
+    def render(self):
+        # create content and add to the popup
+        connect_but = Button(text='Connect to game!')
+        create_but = Button(text='Create game')
+        check_servers = Button(text='Update servers')
+        #button box
+        button_box = BoxLayout(orientation='vertical', spacing=10)
+        button_box.add_widget(connect_but)
+        button_box.add_widget(create_but)
+        button_box.add_widget(check_servers)
+        #servers box
+        servers_box = BoxLayout(orientation='vertical')
+        self.servers_label = Label(text="Servers list",
+                                   size_hint=(1.0, 1.0),
+                                   halign='left',
+                                   valign='top',
+                                   padding=(10, 10))
+        self.servers_label.bind(size=self.servers_label.setter('text_size'))
+        servers_box.add_widget(self.servers_label)
+        servers_box.add_widget(TextInput(text="Type server number", size_hint=(1, .1)))
+        #outer box
+        outer_box = BoxLayout()
+        outer_box.add_widget(button_box)
+        outer_box.add_widget(servers_box)
+        self.popup = Popup(title='Initial screen',
+                           content=outer_box,
+                           auto_dismiss=False,
+                           size_hint=(None, None),
+                           size=(400, 400))
+
+        connect_but.bind(on_press=self._change_to_main_scr)
+        create_but.bind(on_press=self._change_to_main_scr)
+        check_servers.bind(on_press=self._update_servers)
+        self.popup.open()
+
+    def _change_to_main_scr(self, r):
+        self.popup.dismiss()
+        self.sm.current = 'main'
+
+    def _update_servers(self, r):
+        text = '\n'.join([str(i)+". " for i in xrange(10)])
+        self.servers_label.text = text
+        pass
+
+    def disconnect(self):
+        pass
+
+
 class MyApp(App):
     def build(self):
-        self.scr = Screen()
-        return self.scr
+        # Create the screen manager
+        self.sm = ScreenManager()
+        self.main_scr = MainScreen(self.sm, name='main')
+        self.init_scr = InitialScreen(self.sm, name='initial')
+        self.sm.add_widget(self.init_scr)
+        self.sm.add_widget(self.main_scr)
+        return self.sm
     def on_stop(self):
-        self.scr.disconnect()
-
+        self.main_scr.disconnect()
+        self.init_scr.disconnect()
 
 if __name__ == '__main__':
     MyApp().run()
