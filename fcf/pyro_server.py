@@ -9,7 +9,7 @@ import socket
 import ctypes
 
 # Board Size
-SERVER_UPD_PORT = 7777
+SERVER_UPD_PORT = 50000
 BROADCAST_INTERVAL = 5
 signal.signal(signal.SIGTERM, lambda signum, stack_frame: sys.exit(1))
 
@@ -48,7 +48,7 @@ class Server():
         while not stop_event.is_set():
             payload = 'fcfgame|' + uri
             print 'Broadcasting... ' + payload
-            sock.sendto(payload, ('255.255.255.255', SERVER_UPD_PORT))
+            sock.sendto(payload, ('<broadcast>', SERVER_UPD_PORT))
             stop_event.wait(BROADCAST_INTERVAL)
 
     def start_server(self):

@@ -10,7 +10,7 @@ import socket
 from pyro_server import Server
 
 # port to listen to server updates
-SERVER_UPD_PORT = 7777
+SERVER_UPD_PORT = 50000
 MAX_UPD_INTERVAL = 15
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout,
@@ -112,6 +112,8 @@ class Client:
 
     def start_updating_servers(self):
         self.update_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.update_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
         self.update_sock.bind(('', SERVER_UPD_PORT))
         self.update_sock.settimeout(0.5)
         self.update_proc = Thread(target=self._update_aval_servers, 
