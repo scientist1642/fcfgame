@@ -168,7 +168,8 @@ class MainScreen(GridLayout, Screen):
         else:
             d += '1'
         print(' - modifiers are %r' % modifiers)
-
+        if not self.client.game_started:
+            return True
         # Keycode is composed of an integer + a string
         # If we hit escape, release the keyboard
         if keycode[1] == 'escape':
@@ -219,7 +220,7 @@ class InitialScreen(Screen):
                                    padding=(10, 10))
         self.servers_label.bind(size=self.servers_label.setter('text_size'))
         servers_box.add_widget(self.servers_label)
-        self.server_text = TextInput(text="server number", size_hint=(1, .1))
+        self.server_text = TextInput(text="enter server Number!", size_hint=(1, .1))
         servers_box.add_widget(self.server_text)
         #outer box
         outer_box = BoxLayout()
@@ -231,7 +232,7 @@ class InitialScreen(Screen):
                            size_hint=(0.7,0.7),
                            )
 
-        connect_but.bind(on_press=self.join_btn_callback)
+        connect_but.bind(on_press=self.connect_btn_callback)
         create_but.bind(on_press=self.create_btn_callback)
         #check_servers.bind(on_press=self._update_servers)
         self.popup.open()
@@ -244,21 +245,42 @@ class InitialScreen(Screen):
         serv_with_nums = map(lambda (x, y): str(x) + ') ' + y, enumerate(av_servers))
         self.servers_label.text = '\n'.join(serv_with_nums)
 
-    def join_btn_callback(self, dt):
-        self.client.stop_server()
+    def connect_btn_callback(self, dt):
+        def is_int(s):
+            try: 
+                int(s)
+                return True
+            except ValueError:
+                return False
 
-    def create_btn_callback(self, r):
+        #self.client.stop_server()
+        #self.servers_label.text = '1)PYRO:server.game@25.63.229.152:60562'
+        server_text = str(self.servers_label.text)
+        server_num = self.server_text.text.strip()
+        if not is_int(server_num):
+            self._pop('Enter server number only without ")"!')
         
+        to_connect = None 
+        for serv in server_text.split('\n'):
+            if serv.startswith(server_num):
+                _, to_connect = serv.split(')', 1)
+         
+        if not to_connect:
+            self._pop("no server was found with such server")
+            return
+
         # start the server
         
         self.client.stop_updating_servers()
-        self.client.start_server()
+        #self._pop(to_connect.strip())
+        # connect
+        self.connect_to_serv(str(self.username_text.text), to_connect)
 
-        # and connect
 
-        self.client.set_name(str(self.username_text.text))
-        self.client.set_uri(str(self.client.server.uri))
-        print self.client.server.uri
+    def connect_to_serv(self, username, uri):
+        self.client.set_name(username)
+        self.client.set_uri(uri)
+        print "uri is -", uri
         try:
             self.client.connect()
         except Exception, e:
@@ -267,6 +289,14 @@ class InitialScreen(Screen):
             raise e
 
         self.client.game_started = True
+
+
+    def create_btn_callback(self, r):
+        
+        self.client.stop_updating_servers()
+        self.client.start_server()
+        #connect
+        self.connect_to_serv(str(self.username_text.text), self.client.server.uri)
 
         ### 
         self.popup.dismiss()

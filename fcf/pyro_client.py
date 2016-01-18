@@ -10,7 +10,7 @@ import socket
 from pyro_server import Server
 
 # port to listen to server updates
-SERVER_UPD_PORT = 7782
+SERVER_UPD_PORT = 7777
 MAX_UPD_INTERVAL = 15
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout,
@@ -40,7 +40,7 @@ class Client:
             raise Exception('name not set')
 
         try:
-            print('trying to get proxy object')
+            print('trying to get proxy object on uri ' + self.uri)
             self.game = Pyro4.Proxy(self.uri)
             logging.warn(self.uri)
         except Exception, e:

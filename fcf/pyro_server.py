@@ -9,7 +9,7 @@ import socket
 import ctypes
 
 # Board Size
-SERVER_UPD_PORT = 7782
+SERVER_UPD_PORT = 7777
 BROADCAST_INTERVAL = 5
 signal.signal(signal.SIGTERM, lambda signum, stack_frame: sys.exit(1))
 
