@@ -22,6 +22,10 @@ class Server():
         self.n = n
         self.m = m
         self.uri = None # Pyro uri
+        self._broadcast_event =  Event()
+        self.broadcast_sock = None
+        self.broadcast_proc = None
+        self.pyro_proc = None
 
     def _pyro_loop(self, n, m,d):
         print "starting pyro loop"
@@ -72,17 +76,23 @@ class Server():
         self.broadcast_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.broadcast_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.broadcast_sock.bind(('', SERVER_UPD_PORT))
-        self._broadcast_event =  Event()
         self.broadcast_proc = Thread(target = self._broadcast_loop, 
                 args=(self.broadcast_sock, self.uri, self._broadcast_event))
         self._broadcast_event.clear()
         self.broadcast_proc.start()
 
     def stop_server(self):
-        #try:
-        self.broadcast_sock.close()
-        self._broadcast_event.set()
-        self.pyro_proc.terminate()
+        #try
+        #TODO this is needed because client doesn't know so far
+        # is it connected to it's own server or remote server
+        # refactor to add flag
+
+        if self.broadcast_sock:
+            self.broadcast_sock.close()
+        if self._broadcast_event:
+            self._broadcast_event.set()
+        if self.pyro_proc:
+            self.pyro_proc.terminate()
         #except Pyro4.error.CommunicationErrorr as e:
         #    print 'connection error occured'
         #    pass

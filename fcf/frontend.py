@@ -181,6 +181,7 @@ class MainScreen(GridLayout, Screen):
         return True
 
     def change_to_init_scr(self, r):
+        self.client.disconnect()
         self.client.stop_server()
         self.client.start_updating_servers()
         self.sm.current = 'initial'
@@ -241,8 +242,7 @@ class InitialScreen(Screen):
 
     def _upd_servers(self, dt):
         av_servers = self.client.get_aval_servers()
-        self.servers_label.text = '\n'.join(av_servers)
-        serv_with_nums = map(lambda (x, y): str(x) + ') ' + y, enumerate(av_servers))
+        serv_with_nums = map(lambda (x, y): str(x) + ')' + y, enumerate(av_servers))
         self.servers_label.text = '\n'.join(serv_with_nums)
 
     def connect_btn_callback(self, dt):
@@ -259,7 +259,7 @@ class InitialScreen(Screen):
         server_num = self.server_text.text.strip()
         if not is_int(server_num):
             self._pop('Enter server number only without ")"!')
-            #return
+            return
         
         to_connect = None 
         for serv in server_text.split('\n'):
@@ -268,14 +268,16 @@ class InitialScreen(Screen):
          
         if not to_connect:
             self._pop("no server was found with such server")
-            #return
+            return
 
         # start the server
         
         self.client.stop_updating_servers()
         #self._pop(to_connect.strip())
         # connect
-        self.connect_to_serv(str(self.username_text.text), str(self.server_text))
+        self.connect_to_serv(str(self.username_text.text), to_connect)
+        self.popup.dismiss()
+        self.sm.current = 'main'
 
     
     def connect_to_serv(self, username, uri):
