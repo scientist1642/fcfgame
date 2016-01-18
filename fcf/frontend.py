@@ -259,6 +259,7 @@ class InitialScreen(Screen):
         server_num = self.server_text.text.strip()
         if not is_int(server_num):
             self._pop('Enter server number only without ")"!')
+            #return
         
         to_connect = None 
         for serv in server_text.split('\n'):
@@ -267,16 +268,16 @@ class InitialScreen(Screen):
          
         if not to_connect:
             self._pop("no server was found with such server")
-            return
+            #return
 
         # start the server
         
         self.client.stop_updating_servers()
         #self._pop(to_connect.strip())
         # connect
-        self.connect_to_serv(str(self.username_text.text), to_connect)
+        self.connect_to_serv(str(self.username_text.text), str(self.server_text))
 
-
+    
     def connect_to_serv(self, username, uri):
         self.client.set_name(username)
         self.client.set_uri(uri)
