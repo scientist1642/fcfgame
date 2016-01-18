@@ -82,18 +82,17 @@ class Client:
         while True:
             try:
                 server_uri = sock.recv(1024)
+                if server_uri.startswith('fcfgame|'):
+                    _, server_uri = server_uri.split('|', 1)
+                    aval_servers[server_uri] = time.time()
+                logging.debug( 'received server' + server_uri)
             except socket.timeout, e:    
-                if not stop_event.is_set():
-                    continue
-                else:
+                if stop_event.is_set():
+                    logging.warn('exiting updating server loop')
                     return
             #logging.debug('received server %s' % (server_uri,))
-            print 'received server' + server_uri
 
             # to check we reveive expected messages
-            if server_uri.startswith('fcfgame|'):
-                _, server_uri = server_uri.split('|', 1)
-                aval_servers[server_uri] = time.time()
             
 
 
@@ -113,8 +112,8 @@ class Client:
 
     def start_updating_servers(self):
         self.update_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.update_sock.bind(('', 7774))
-        self.update_sock.settimeout(2)
+        self.update_sock.bind(('', SERVER_UPD_PORT))
+        self.update_sock.settimeout(0.5)
         self.update_proc = Thread(target=self._update_aval_servers, 
                 args=(self.update_sock, self.aval_servers, self.stop_upd_event))
         self.stop_upd_event.clear()
@@ -123,6 +122,8 @@ class Client:
     def stop_updating_servers(self):
         print "stopping updating servers"
         self.stop_upd_event.set()
+        time.sleep(0.6)
+        #self.update_sock.shutdown(socket.SHUT_WR)
         self.update_sock.close()
         #self.update_proc_event.set()
 
