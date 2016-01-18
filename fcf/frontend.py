@@ -181,6 +181,7 @@ class MainScreen(GridLayout, Screen):
 
     def change_to_init_scr(self, r):
         self.client.stop_server()
+        self.client.start_updating_servers()
         self.sm.current = 'initial'
         self.sm.get_screen("initial").render()
 
@@ -230,9 +231,9 @@ class InitialScreen(Screen):
                            size_hint=(0.7,0.7),
                            )
 
-        connect_but.bind(on_press=self.create_btn_callback)
+        connect_but.bind(on_press=self.join_btn_callback)
         create_but.bind(on_press=self.create_btn_callback)
-        check_servers.bind(on_press=self._update_servers)
+        #check_servers.bind(on_press=self._update_servers)
         self.popup.open()
         self.servupd_interval = 2 
         Clock.schedule_interval(self._upd_servers, self.servupd_interval)
@@ -242,6 +243,9 @@ class InitialScreen(Screen):
         self.servers_label.text = '\n'.join(av_servers)
         serv_with_nums = map(lambda (x, y): str(x) + ') ' + y, enumerate(av_servers))
         self.servers_label.text = '\n'.join(serv_with_nums)
+
+    def join_btn_callback(self, dt):
+        self.client.stop_server()
 
     def create_btn_callback(self, r):
         
@@ -288,6 +292,7 @@ class MyApp(App):
         self.sm.add_widget(self.main_scr)
         return self.sm
     def on_stop(self):
+        self.client.stop_updating_servers() 
         self.main_scr.disconnect()
         self.init_scr.disconnect()
 
