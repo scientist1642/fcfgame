@@ -13,6 +13,11 @@ SERVER_UPD_PORT = 50000
 BROADCAST_INTERVAL = 5
 signal.signal(signal.SIGTERM, lambda signum, stack_frame: sys.exit(1))
 
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    return s.getsockname()[0]  
+
 class Server():
     
     def __init__(self, n, m):
@@ -29,7 +34,7 @@ class Server():
 
     def _pyro_loop(self, n, m,d):
         print "starting pyro loop"
-        daemon = Pyro4.Daemon(host='25.63.229.152')
+        daemon = Pyro4.Daemon(host=get_ip_address())
         game = Engine(n, m)
         game.run()
         d[1] = daemon.register(game, "server.game").asString()
