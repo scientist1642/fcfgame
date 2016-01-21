@@ -204,14 +204,12 @@ class InitialScreen(Screen):
         # create content and add to the popup
         connect_but = Button(text='Connect to game!')
         create_but = Button(text='Create game')
-        check_servers = Button(text='Update servers')
         #button box
         button_box = BoxLayout(orientation='vertical', spacing=10)
         self.username_text = TextInput(text="username", size_hint=(1, 1))
         button_box.add_widget(self.username_text)
-        button_box.add_widget(connect_but)
         button_box.add_widget(create_but)
-        button_box.add_widget(check_servers)
+        button_box.add_widget(connect_but)
         #servers box
         servers_box = BoxLayout(orientation='vertical')
         self.servers_label = Label(text="Servers list",
@@ -235,7 +233,6 @@ class InitialScreen(Screen):
 
         connect_but.bind(on_press=self.connect_btn_callback)
         create_but.bind(on_press=self.create_btn_callback)
-        #check_servers.bind(on_press=self._update_servers)
         self.popup.open()
         self.servupd_interval = 2 
         Clock.schedule_interval(self._upd_servers, self.servupd_interval)
@@ -305,15 +302,6 @@ class InitialScreen(Screen):
         self.popup.dismiss()
         self.sm.current = 'main'
 
-    def _update_servers(self, r):
-        text = '\n'.join([str(i)+". " for i in xrange(10)])
-        self.servers_label.text = text
-        pass
-
-    def disconnect(self):
-        pass
-
-
 class MyApp(App):
     def build(self):
         # Create the screen manager
@@ -327,7 +315,6 @@ class MyApp(App):
     def on_stop(self):
         self.client.stop_updating_servers() 
         self.main_scr.disconnect()
-        self.init_scr.disconnect()
 
 if __name__ == '__main__':
     MyApp().run()
